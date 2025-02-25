@@ -1,24 +1,108 @@
-#V Stronger forceManyBody.
-#V Search.
-#X Nodes and links coloring.
-#V Clickable links.
-#? Add nodes to a page which have multiple pages linking to it (>= 2). 
-    This didn't work with (>= 2) because there where too many pages satisfying this condition.
-    Maybe (>= 3/4).
-#V Better Search.
-#V Node delete.
-#V Currently viewed page indecation.
-#V Navigation buttons.
-    #? Fix page disappearance bug.
-#V Page cache.
-#V Navigate search results with arrows.
-#V Scroll up on page load.
-#V Random article.
-#V Open on wikipedia.
-#V Help/how to use (github readme). 
-#V Share graph using link.
-#V Link to github.
-#V Text on hover.
-#V Links to section.
-#V Titel
-#  license
+# 1. Enhanced Navigation & Usability
+        Zoom/Pan Controls
+
+        Add mouse wheel zoom + drag-to-pan functionality
+
+        Reset view button
+
+        Double-click node to focus/center
+
+        Node Grouping/Categories
+
+        Cluster nodes by Wikipedia categories
+
+        Color-code nodes based on category
+
+        Toggle category visibility
+
+        Edge Labels
+
+        Show link context (e.g., "See also" vs "References")
+
+        Display anchor text from source article
+
+2. Advanced Filtering & Search
+        Dynamic Filters
+
+        Minimum connection threshold slider
+
+        Time-based filtering (last edited date)
+
+        Link type filters (article sections)
+
+        Improved Search
+
+        Autocomplete with article previews
+
+        Search within current graph
+
+        Negative search terms ("-physics")
+
+3. Knowledge Graph Analytics
+        Connection Insights
+
+        Node degree indicator (number of links)
+
+        Betweenness centrality visualization
+
+        Shortest path finder between nodes
+
+        Temporal Analysis
+
+        Article edit history timeline
+
+        Link evolution over time
+
+4. Collaborative Features
+        Shared Sessions
+
+        Real-time collaborative graphs
+
+        Session comments/annotations
+
+        Export as interactive HTML
+
+        User Accounts
+
+        Save favorite graphs
+
+        Follow other users' explorations
+
+5. Mobile Optimization
+        Touch Gestures
+
+        Pinch-to-zoom
+
+        Swipe navigation
+
+        Simplified mobile UI
+
+6. Advanced Visualization
+        Dynamic Themes
+
+        Dark/light mode toggle
+
+        Custom color schemes
+
+7. Content Enhancement
+        Node Previews
+
+        Hover tooltips with article excerpts
+
+        Featured images from articles
+
+        Contextual Layers
+
+        Geolocation mapping (for place articles)
+
+        Timeline view for event-based articles
+
+8. Performance Optimizations
+        Web Workers
+        Offload physics calculations from main thread
+
+        Level-of-Detail Rendering
+        Simplify nodes when zoomed out
+
+        QuadTree Optimization
+        For faster collision detection

@@ -1,352 +1,630 @@
 <!DOCTYPE html>
-<!--
-    Third-party licenses
+<html id="html" lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="./Vec2.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.20.0/dist/cytoscape.min.js"></script>
+    <title>Wikipedia Graph</title>
+    <link
+      rel="stylesheet"
+      href="//en.wikipedia.org/w/load.php?debug=false&lang=en&modules=mediawiki.legacy.commonPrint,shared|skins.vector.styles&only=styles&skin=vector&*"
+    />
+    <style>
+      #body {
+        display: flex;
+        overflow: hidden;
+        height: 100vh;
+        margin: 0;
+      }
 
-    See also https://arifr1234.github.io/wikipedia-graph/about.html for further information.
+      #pageContainer {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+      }
 
-    Icons from Wikimedia Commons:
+      #navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f6f6f6;
+        padding: 5px;
+      }
 
-    * "VisualEditor - Icon - External-link.svg" : Copyright (c) 2011-2013 VisualEditor team (https://git.wikimedia.org/blob/mediawiki%2Fextensions%2FVisualEditor.git/master/AUTHORS.txt); Licensed under MIT license (text below).
-        (https://commons.wikimedia.org/wiki/File:VisualEditor_-_Icon_-_External-link.svg)
-    
-    * "OOjs UI icon help-ltr.svg" & "OOjs UI indicator search-ltr.svg" & "OOjs UI icon info big.svg" & "OOjs UI icon trash apex.svg" : Copyright (c) 2011-2017 OOjs UI Team and other contributors (https://phabricator.wikimedia.org/diffusion/GOJU/browse/master/AUTHORS.txt) ; Licensed under MIT license (text below).
-        (https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_help-ltr.svg) (https://commons.wikimedia.org/wiki/File:OOjs_UI_indicator_search-ltr.svg) (https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_info_big.svg) (https://commons.wikimedia.org/wiki/File:OOjs_UI_icon_trash_apex.svg)
+      #navControls {
+        display: flex;
+        gap: 5px;
+      }
 
-    
-    MIT License:
+      #navbar button {
+        height: 30px;
+        width: 30px;
+        border-style: solid;
+        border-radius: 3px;
+        border-width: 1.5px;
+        font-size: 18px;
+        line-height: 24px;
+        padding: 0;
+      }
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+      #searchViewButton.search {
+        background: no-repeat center
+          url(https://en.wikipedia.org/w/skins/Vector/resources/skins.vector.styles/images/search.svg);
+      }
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+      #searchViewButton.view {
+        background: no-repeat center / 1.5em
+          url(https://en.wikipedia.org/w/resources/src/mediawiki.skinning/images/magnify-clip-ltr.svg);
+      }
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
--->
-<html id="html">
-    <head>
-        <script src="https://d3js.org/d3.v6.min.js"></script>
-        <script src="./Vec2.js"></script>
+      #backButton {
+        background: no-repeat center / 1.5em url(./img/leftArrow.svg);
+      }
 
-        <title>Wikipedia Graph</title>
+      #forwardButton {
+        background: no-repeat center / 1.5em url(./img/rightArrow.svg);
+      }
 
+      #openInWikipediaButton {
+        background: no-repeat center / 2em
+          url(https://upload.wikimedia.org/wikipedia/commons/5/5a/Wikipedia%27s_W.svg);
+      }
 
-        <link rel="stylesheet" href="//en.wikipedia.org/w/load.php?debug=false&lang=en&modules=mediawiki.legacy.commonPrint,shared|skins.vector.styles&only=styles&skin=vector&*">
+      #deleteButton {
+        background: no-repeat -0.08em 0em / 2.25em url(https://upload.wikimedia.org/wikipedia/commons/4/4c/OOjs_UI_icon_trash_apex.svg);
+      }
 
+      #shareButton {
+        background: no-repeat center / 1.25em
+          url(https://upload.wikimedia.org/wikipedia/commons/d/d9/VisualEditor_-_Icon_-_External-link.svg);
+      }
 
-        <style>
-            /*#html, #body 
-            {   
-                margin: 0; 
-                height: 100%; 
-                overflow: hidden;
-            }*/
+      #contentAndGraph {
+        flex-grow: 1;
+        position: relative;
+      }
 
-            #body
-            {
-                display: flex;
-                overflow: hidden;
-            }
+      #articleContent {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 45%;
+        overflow: auto;
+      }
 
-            #svgcontainer
-            {
-                flex-grow: 1;
+      #dragBar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 45%;
+        width: 10px;
+        cursor: col-resize;
+        background-color: #a2a9b1;
+      }
 
-                display: flex;
+      #svgcontainer {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: calc(45% + 10px);
+        right: 0;
+        display: flex;
+        font-size: x-large;
+      }
 
-                font-size: x-large;
-            }
+      #graphControls {
+        display: flex;
+        gap: 5px;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 5px;
+        border-radius: 5px;
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+      }
 
-            #leftDiv
-            {
-                flex-basis: 65%;
+      #graphControls button {
+        padding: 5px 10px;
+        font-size: 16px;
+      }
 
-                display: flex;
-                flex-direction: column;
-            }
+      #suggestions {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        background: white;
+        position: absolute;
+        width: 100%;
+        z-index: 10;
+      }
 
-            #pageContainer
-            {
-                position: relative;
-                width: 100%;
+      .suggestion {
+        display: block;
+        margin: 5px;
+        border-style: solid;
+        border-width: 1.5px;
+        border-color: transparent;
+        padding: 2px;
+        cursor: pointer;
+        color: #333;
+        background: white;
+      }
 
-                flex-grow: 1;
-            }
+      .suggestion:hover {
+        background: #e0e0e0;
+      }
 
-            #pageContainer > *
-            {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                overflow: auto;
-            }
+      .selected {
+        border-color: #a2a9b1;
+        background-color: #e0e0e0;
+      }
 
-            #navbar > *
-            {
-                margin: 5px;
+      #articleContentDiv {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        padding: 20px;
+        background-color: white;
+        max-width: 800px;
+        margin: 0 auto;
+        color: #333;
+      }
 
-                cursor: pointer;
+      #articleContentDiv h1,
+      #articleContentDiv h2,
+      #articleContentDiv h3 {
+        color: #222;
+      }
 
-                display: inline-block;
-            }
-            #navbar button
-            {
-                height: 30px;
-                width: 30px;
+      #articleContentDiv p {
+        margin-bottom: 15px;
+      }
 
-                border-style: solid; /* hidden */
-                border-radius: 3px;
-                border-width: 1.5px;
-            }
-            #searchViewButton.search
-            {
-                background: no-repeat center url(https://en.wikipedia.org/w/skins/Vector/resources/skins.vector.styles/images/search.svg);
-            }
-            #searchViewButton.view
-            {
-                background: no-repeat center / 1.5em url(https://en.wikipedia.org/w/resources/src/mediawiki.skinning/images/magnify-clip-ltr.svg); /* document-ltr.svg */
-            }
+      .highlight-yellow {
+        background-color: yellow;
+      }
 
-            #backButton
-            {
-                background: no-repeat center / 1.5em url(./img/leftArrow.svg);
-            }
-            #forwardButton
-            {
-                background: no-repeat center / 1.5em url(./img/rightArrow.svg);
-            }
+      .noselect {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
 
-            #openInWikipediaButton
-            {
-                background: no-repeat center / 2em url(https://upload.wikimedia.org/wikipedia/commons/5/5a/Wikipedia%27s_W.svg);
-            }
+      .tooltip {
+        z-index: 100;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        display: none;
+      }
 
-            #deleteButton
-            {
-                background: no-repeat -0.08em 0em / 2.25em url(https://upload.wikimedia.org/wikipedia/commons/4/4c/OOjs_UI_icon_trash_apex.svg);
-            }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: 1px solid #0056b3;
+      }
 
-            #helpButton
-            {
-                background: no-repeat center / 1.25em url(https://upload.wikimedia.org/wikipedia/commons/b/b2/OOjs_UI_icon_help-ltr.svg);
-            }
+      button:disabled {
+        background-color: #ccc;
+        color: #666;
+      }
 
-            #shareButton
-            {
-                background: no-repeat center / 1.25em url(https://upload.wikimedia.org/wikipedia/commons/d/d9/VisualEditor_-_Icon_-_External-link.svg);
-            }
+      #article-content {
+        display: block !important;
+        width: 40%;
+        height: 100vh;
+        overflow-y: auto;
+      }
 
-            #aboutButton
-            {
-                background: no-repeat center / 1.75em url(https://upload.wikimedia.org/wikipedia/commons/6/63/OOjs_UI_icon_info_big.svg);
-            }
+      #articleContentDiv a {
+        color: #0645ad;
+        text-decoration: underline;
+        cursor: pointer;
+      }
 
-            #githubButton
-            {
-                background: no-repeat center / 1.75em url(./img/GitHub-Mark-32px.png);
-            }
+      #articleContentDiv a:hover {
+        color: #0b0080;
+      }
 
-            .suggestion
-            {
-                display: block;
-                margin: 5px;
-
-                border-style: solid;
-                border-width: 1.5px;
-                border-color: transparent;
-            }
-
-            .selected
-            {
-                border-color: #a2a9b1;
-            }
-
-            #randmArticle
-            {
-                display: inline-block;
-                margin: 5px;
-                margin-left: 15px;
-            }
-
-            .highlight-yellow
-            {
-                background-color: yellow;
-            }
-    
-            .noselect {
-                -webkit-touch-callout: none; /* iOS Safari */
-                -webkit-user-select: none; /* Safari */
-                -khtml-user-select: none; /* Konqueror HTML */
-                -moz-user-select: none; /* Old versions of Firefox */
-                -ms-user-select: none; /* Internet Explorer/Edge */
-                user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
-            }
-        </style>
-    </head>
-    <body id="body">
-        <div id="leftDiv">
-            <div id="navbar" style="background: #f6f6f6; padding: 5px">
-                <button id="searchViewButton"></button>
-                <button id="backButton" title="Back" disabled class="page"></button>
-                <button id="forwardButton" title="Forward" disabled class="page"></button>
-                <a id="openInWikipediaA" title="Open in Wikipedia" target="_blank" class="page">
-                    <button id="openInWikipediaButton"></button>
-                </a>
-                <button id="deleteButton" title="Remove" disabled class="page"></button>
-                <a id="shareA" href="./" title="Share network (use for saving)" target="_blank">
-                    <button id="shareButton"></button>
-                </a>
-
-
-                <a id="aboutA" style="float: right;" href="./about.html" title="About / Copyright and Licensing information" target="_blank">
-                    <script> document.currentScript.parentElement.href = document.currentScript.parentElement.href; </script> <!-- HACK: this will set the href to the absolute path using the defult <base>, before the new <base> is set. -->
-                    <button id="aboutButton"></button>
-                </a>
-                <a id="githubA" style="float: right;" href="https://github.com/arifr1234/wikipedia-graph" title="GitHub" target="_blank">
-                    <button id="githubButton"></button>
-                </a>
-                <a id="helpA" style="float: right;" href="https://github.com/arifr1234/wikipedia-graph/blob/master/README.md#how-to-use-it" title="Help" target="_blank">
-                    <button id="helpButton"></button>
-                </a>
-                
-            </div>
-            <hr style="margin: 0px; height: 0.5px;"/>
-            <div id="pageContainer">
-                <div id="searchDiv">
-                    <div style="margin: 10px;">
-                        <div style="float: left;">
-                            <input id="inputTitel" placeholder="Search Wikipedia" autocomplete="off" type="text" style="margin: 5px;" />
-                            <div id="suggestions"></div>
-                        </div>
-                        <a id="randmArticle">Random Article</a>
-                    </div>
-                </div>
-            </div>
+      @media (max-width: 768px) {
+        #articleContent {
+          width: 100%;
+          position: static;
+        }
+        #dragBar {
+          display: none;
+        }
+        #svgcontainer {
+          width: 100%;
+          position: static;
+          top: auto;
+          bottom: auto;
+          left: auto;
+          right: auto;
+        }
+        #contentAndGraph {
+          display: flex;
+          flex-direction: column;
+        }
+        #navbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body id="body">
+    <div id="pageContainer">
+      <div id="navbar">
+        <div id="navControls">
+          <button
+            id="searchViewButton"
+            aria-label="Toggle search and view"
+          ></button>
+          <button
+            id="backButton"
+            title="Back"
+            disabled
+            class="page"
+            aria-label="Go back"
+          ></button>
+          <button
+            id="forwardButton"
+            title="Forward"
+            disabled
+            class="page"
+            aria-label="Go forward"
+          ></button>
+          <a
+            id="openInWikipediaA"
+            title="Open in Wikipedia"
+            target="_blank"
+            class="page"
+            aria-label="Open current article in Wikipedia"
+          >
+            <button id="openInWikipediaButton"></button>
+          </a>
+          <button
+            id="deleteButton"
+            title="Remove"
+            disabled
+            class="page"
+            aria-label="Remove current article"
+          ></button>
         </div>
+        <button
+          id="toggleLeftDiv"
+          title="Toggle left panel"
+          aria-label="Toggle left panel"
+        >
+          ☰
+        </button>
+        <a id="shareLink" href="#">Share</a>
+      </div>
 
-        <a id="dragBar" style="cursor:col-resize; width:10px; background-color: #a2a9b1;"></a>
-        
-        
-        <div id="svgcontainer"></div>
+      <div id="contentAndGraph">
+        <div id="articleContent">
+          <div id="searchDiv">
+            <p>
+              Welcome to Wikipedia Graph! Enter an article title to explore its
+              connections in the graph on the right.
+            </p>
+            <div style="margin: 10px">
+              <input
+                id="inputTitel"
+                type="text"
+                aria-label="Search Wikipedia articles"
+                placeholder="Search Wikipedia articles"
+              />
+              <button id="searchButton" aria-label="Search">Search</button>
+              <div
+                role="listbox"
+                id="suggestions"
+                aria-label="Search suggestions"
+              ></div>
+            </div>
+          </div>
+          <div
+            id="articleContentDiv"
+            style="display: none"
+            role="article"
+            aria-live="polite"
+            aria-label="Wikipedia article content"
+          ></div>
+        </div>
+        <div id="dragBar"></div>
+        <div id="svgcontainer">
+          <div id="graphControls">
+            <button id="zoomInButton" title="Zoom In" aria-label="Zoom in">
+              +
+            </button>
+            <button id="zoomOutButton" title="Zoom Out" aria-label="Zoom out">
+              −
+            </button>
+            <button
+              id="resetViewButton"
+              title="Reset View"
+              aria-label="Reset view"
+            >
+              ↺
+            </button>
+            <button id="panUpButton" title="Pan Up" aria-label="Pan up">
+              ↑
+            </button>
+            <button id="panDownButton" title="Pan Down" aria-label="Pan down">
+              ↓
+            </button>
+            <button id="panLeftButton" title="Pan Left" aria-label="Pan left">
+              ←
+            </button>
+            <button
+              id="panRightButton"
+              title="Pan Right"
+              aria-label="Pan right"
+            >
+              →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        
+    <!-- Drag Bar Resizing -->
+    <script>
+      const dragBar = d3
+        .select("#dragBar")
+        .style("touch-action", "none")
+        .style("-webkit-touch-callout", "none");
+      const dragBarWidth = dragBar.node().offsetWidth || 10;
+      const articleContent = d3.select("#articleContent");
+      const svgcontainer = d3.select("#svgcontainer");
+      const contentAndGraph = d3.select("#contentAndGraph");
 
-        <script>
-            dragBarWidth = d3.select("#dragBar").node().getBoundingClientRect().width;
-            let leftDiv = d3.select("#leftDiv");
-            d3.select("#dragBar").call(d3.drag()
-                .on("drag", (event) => { leftDiv.style("flex-basis", `${event.x - dragBarWidth/2}px`); })
-            )
-        </script>
+      let startX = 0;
+      let startWidth = 0;
 
-        <script>
-            let selectedSearchRes = null;
+      dragBar.call(
+        d3
+          .drag()
+          .on("start", function (event) {
+            startX = event.x;
+            startWidth =
+              parseInt(articleContent.style("width"), 10) ||
+              contentAndGraph.node().offsetWidth * 0.45;
+          })
+          .on("drag", function (event) {
+            const deltaX = event.x - startX;
+            let newWidth = startWidth + deltaX;
+            const minWidth = 100;
+            const maxWidth =
+              contentAndGraph.node().offsetWidth - dragBarWidth - 10;
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            articleContent.style("width", `${newWidth}px`);
+            dragBar.style("left", `${newWidth}px`);
+            svgcontainer.style("left", `${newWidth + dragBarWidth}px`);
+          })
+          .on("end", function () {
+            if (typeof resize === "function") resize();
+          })
+      );
 
-            let inputTitel = d3.select("#inputTitel");
-            let suggestions = d3.select("#suggestions").node();
+      function setInitialWidths() {
+        const contentAndGraphWidth = contentAndGraph.node().offsetWidth;
+        const initialArticleWidth = Math.round(contentAndGraphWidth * 0.45);
+        articleContent.style("width", `${initialArticleWidth}px`);
+        dragBar.style("left", `${initialArticleWidth}px`);
+        svgcontainer.style("left", `${initialArticleWidth + dragBarWidth}px`);
+        if (typeof resize === "function") resize();
+      }
 
-            function keyDown(e)
-            {
-                if(e.key === "Enter")
-                {
-                    selectedSearchRes.classList.remove("selected");
+      window.addEventListener("load", setInitialWidths);
+      window.addEventListener("resize", setInitialWidths);
+    </script>
 
-                    loadWikiPage(selectedSearchRes.innerHTML);
-                    //searchButtonClick();
-                }
+    <!-- Search Input and Toggle Logic -->
+    <script>
+      let selectedSearchRes = null;
+      const suggestions = d3.select("#suggestions");
+      const searchDiv = d3.select("#searchDiv");
+      let articleContentDiv2 = d3.select("#articleContentDiv");
+      const searchButton = d3.select("#searchViewButton");
+      let isSearch = true;
 
-                if(selectedSearchRes == null)
-                {
-                    switch (e.key) {
-                        case "ArrowUp": selectedSearchRes = suggestions.lastChild; break;
-                        case "ArrowDown": selectedSearchRes = suggestions.firstChild; break;
-                    }
-                }
-                else
-                {
-                    selectedSearchRes.classList.remove("selected");
-                    switch (e.key) {
-                        case "ArrowUp": selectedSearchRes = selectedSearchRes.previousSibling; break;
-                        case "ArrowDown": selectedSearchRes = selectedSearchRes.nextSibling; break;
-                    }
-                }
-                if(selectedSearchRes != null) selectedSearchRes.classList.add("selected");
+      const debounce = (func, delay) => {
+        let timeoutId;
+        return (...args) => {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => func.apply(null, args), delay);
+        };
+      };
+
+      const debouncedSearch = debounce((value) => {
+        suggestions.selectAll(".suggestion").remove();
+        selectedSearchRes = null;
+        if (value) {
+          d3.json(
+            `https://en.wikipedia.org/w/api.php?action=opensearch&origin=*&limit=10&search=${encodeURIComponent(
+              value
+            )}`
+          ).then((data) => {
+            const results = data[1];
+            if (results.length === 0) {
+              suggestions
+                .append("div")
+                .attr("class", "suggestion")
+                .text("No results found")
+                .style("color", "#666")
+                .style("padding", "5px");
+            } else {
+              suggestions
+                .selectAll(".suggestion")
+                .data(results)
+                .enter()
+                .append("div")
+                .attr("class", "suggestion")
+                .attr("role", "option")
+                .text((d) => d)
+                .style("padding", "5px")
+                .style("cursor", "pointer")
+                .on("click", (_, d) => {
+                  loadWikiPage(d);
+                  searchButtonClick(false);
+                });
             }
+          });
+        }
+      }, 300);
 
-            inputTitel.on("focus", () => {
-                inputTitel.on("keydown", keyDown);
-            });
+      const inputTitel = d3.select("#inputTitel").on("input", function () {
+        debouncedSearch(this.value);
+      });
 
-            inputTitel.on("blur", () => {
-                inputTitel.on("keydown", null);
-            });
+      function keyDown(e) {
+        const suggestionNodes = suggestions.selectAll(".suggestion").nodes();
+        if (suggestionNodes.length === 0) return;
 
-        </script>
+        if (!selectedSearchRes) {
+          if (e.key === "ArrowDown") selectedSearchRes = suggestionNodes[0];
+          else if (e.key === "ArrowUp")
+            selectedSearchRes = suggestionNodes[suggestionNodes.length - 1];
+        } else {
+          const currentIndex = suggestionNodes.indexOf(selectedSearchRes);
+          d3.select(selectedSearchRes).classed("selected", false);
+          if (
+            e.key === "ArrowDown" &&
+            currentIndex < suggestionNodes.length - 1
+          ) {
+            selectedSearchRes = suggestionNodes[currentIndex + 1];
+          } else if (e.key === "ArrowUp" && currentIndex > 0) {
+            selectedSearchRes = suggestionNodes[currentIndex - 1];
+          }
+        }
 
-        <script>
-            let currentPage = null;
-            let searchDiv = d3.select("#searchDiv");
+        if (selectedSearchRes)
+          d3.select(selectedSearchRes).classed("selected", true);
 
-            let searchButton = d3.select("#searchViewButton");
+        if (e.key === "Enter" && selectedSearchRes) {
+          loadWikiPage(selectedSearchRes.textContent);
+          searchButtonClick(false);
+        }
+      }
 
-            function changePage(oldPage, newPage)
-            {
-                if(oldPage != null){
-                    oldPage.style("display", "none");
-                }
-                if(newPage != null){
-                    newPage.style("display", "unset");
-                }
+      inputTitel.on("focus", () => inputTitel.on("keydown", keyDown));
+      inputTitel.on("blur", () => inputTitel.on("keydown", null));
+
+      function searchButtonClick(val) {
+        isSearch = typeof val === "undefined" ? !isSearch : val;
+
+        const status = document.createElement("div");
+        status.setAttribute("role", "status");
+        status.textContent = isSearch
+          ? "Switched to search view"
+          : "Switched to article view";
+        document.body.appendChild(status);
+        setTimeout(() => document.body.removeChild(status), 2000);
+
+        searchDiv.style("display", isSearch ? "block" : "none");
+        articleContentDiv2.style("display", isSearch ? "none" : "block");
+
+        searchButton
+          .classed("view", isSearch)
+          .classed("search", !isSearch)
+          .attr("title", isSearch ? "Article" : "Search");
+
+        d3.selectAll("#navbar > .page").style(
+          "display",
+          isSearch ? "none" : "inline-block"
+        );
+
+        if (!isSearch) {
+          selectedSearchRes = null;
+          if (currentPage && currentPage !== articleContentDiv2) {
+            currentPage.style("display", "none");
+          }
+          articleContentDiv2.style("display", "block");
+        } else {
+          articleContentDiv2.html("");
+        }
+
+        d3.select("#toggleLeftDiv").style(
+          "display",
+          isSearch ? "none" : "inline-block"
+        );
+      }
+
+      searchButtonClick(true);
+      searchButton.on("click", () => searchButtonClick());
+
+      d3.select("#toggleLeftDiv").on("click", () => {
+        const articleContentMobile = d3.select("#articleContent");
+        articleContentMobile.style(
+          "display",
+          articleContentMobile.style("display") === "none" ? "block" : "none"
+        );
+      });
+
+      tippy("#searchViewButton", {
+        content: "Toggle between search and article view",
+      });
+      tippy("#backButton", { content: "Go back to previous article" });
+      tippy("#forwardButton", { content: "Go forward to next article" });
+      tippy("#openInWikipediaButton", {
+        content: "Open current article in Wikipedia",
+      });
+      tippy("#deleteButton", { content: "Remove current article from graph" });
+      tippy("#shareButton", {
+        content: "Share or save the current graph state",
+      });
+      tippy("#toggleLeftDiv", {
+        content: "Toggle visibility of article content",
+      });
+      tippy("#zoomInButton", { content: "Zoom in on the graph" });
+      tippy("#zoomOutButton", { content: "Zoom out of the graph" });
+      tippy("#resetViewButton", { content: "Reset graph view to default" });
+      tippy("#panUpButton", { content: "Pan graph upward" });
+      tippy("#panDownButton", { content: "Pan graph downward" });
+      tippy("#panLeftButton", { content: "Pan graph to the left" });
+      tippy("#panRightButton", { content: "Pan graph to the right" });
+
+      function generateGraphState() {
+        return "graph-state-placeholder";
+      }
+
+      function updateShareUrl() {
+        const graphState = generateGraphState();
+        const shareUrl = `${window.location.origin}?graph=${encodeURIComponent(
+          graphState
+        )}`;
+        d3.select("#shareA").attr("href", shareUrl);
+      }
+
+      d3.select("#shareButton").on("click", () => updateShareUrl());
+    </script>
+
+    <!-- Add delegated click handler for article links -->
+    <script>
+      document
+        .getElementById("articleContentDiv")
+        .addEventListener("click", function (e) {
+          if (e.target.tagName === "A") {
+            e.preventDefault();
+            const href = e.target.getAttribute("href");
+            if (href && href.startsWith("/wiki/")) {
+              const title = decodeURIComponent(
+                href.split("/wiki/")[1].replace(/_/g, " ")
+              );
+              loadWikiPage(title);
             }
+          }
+        });
+    </script>
 
-            let isSearch = null;
-
-            function searchButtonClick(val) {
-                if(typeof val === 'undefined') isSearch = !isSearch;
-                else isSearch = val;
-
-
-                if(isSearch)
-                {
-                    changePage(currentPage, searchDiv);
-
-                    searchButton.classed("view", true);
-                    searchButton.classed("search", false);
-
-                    searchButton.attr("title", "Article")
-
-                    d3.selectAll("#navbar > .page").style("display", "none");
-                }
-                else
-                {
-                    changePage(searchDiv, currentPage);
-
-                    searchButton.classed("search", true);
-                    searchButton.classed("view", false);
-
-                    searchButton.attr("title", "Search")
-
-                    d3.selectAll("#navbar > .page").style("display", null);
-
-                    selectedSearchRes = null;
-                }
-            }
-
-            searchButtonClick(true);
-
-            searchButton.on("click", (d) => { searchButtonClick(); });
-        </script>
-
-        <script src="index.js"></script>
-    </body>
+    <script src="index.js"></script>
+  </body>
 </html>
